@@ -1,4 +1,4 @@
-package com.megster.cordova;
+package com.hassane101.cordova;
 
 import java.util.Locale;
 
@@ -9,11 +9,9 @@ import org.apache.cordova.PluginResult;
 import org.json.JSONException;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.net.Uri;
-import android.provider.MediaStore;
+import android.os.Build;
 import android.util.Log;
 
 public class FileChooser extends CordovaPlugin {
@@ -37,20 +35,19 @@ public class FileChooser extends CordovaPlugin {
 
 	public void chooseFile(CallbackContext callbackContext) {
 
-		// type and title should be configurable
-
 		Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 		intent.setType("*/*");
 		intent.addCategory(Intent.CATEGORY_OPENABLE);
-		intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
-
+		if (Build.VERSION.SDK_INT >= 11) {
+			intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+		}
 		Intent chooser = Intent.createChooser(intent, "Select File");
-		cordova.startActivityForResult(this, chooser, PICK_FILE_REQUEST);
+		this.cordova.startActivityForResult(this, chooser, PICK_FILE_REQUEST);
 
 		PluginResult pluginResult = new PluginResult(
 				PluginResult.Status.NO_RESULT);
 		pluginResult.setKeepCallback(true);
-		callback = callbackContext;
+		this.callback = callbackContext;
 		callbackContext.sendPluginResult(pluginResult);
 	}
 
@@ -71,16 +68,15 @@ public class FileChooser extends CordovaPlugin {
 						callback.success(result);
 					} else if ((uri.toString().toLowerCase(Locale.US)
 							.startsWith("content://"))) {
-						result = getRealPathFromURI(cordova.getActivity(), uri);
+						result = ImageFilePath.getPath(cordova.getActivity(),
+								uri);
 						callback.success(result);
-					} else {//fallback to original
+					} else {// fallback to original
 						callback.success(uri.toString());
 					}
 					Log.w(TAG, uri.toString());
 				} else {
-
 					callback.error("File uri was null");
-
 				}
 
 			} else if (resultCode == Activity.RESULT_CANCELED) {
@@ -89,27 +85,8 @@ public class FileChooser extends CordovaPlugin {
 				PluginResult pluginResult = new PluginResult(
 						PluginResult.Status.NO_RESULT);
 				callback.sendPluginResult(pluginResult);
-
 			} else {
-
 				callback.error(resultCode);
-			}
-		}
-	}
-
-	public String getRealPathFromURI(Context context, Uri contentUri) {
-		Cursor cursor = null;
-		try {
-			String[] proj = { MediaStore.Images.Media.DATA };
-			cursor = context.getContentResolver().query(contentUri, proj, null,
-					null, null);
-			int column_index = cursor
-					.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-			cursor.moveToFirst();
-			return cursor.getString(column_index);
-		} finally {
-			if (cursor != null) {
-				cursor.close();
 			}
 		}
 	}
